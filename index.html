@@ -1253,6 +1253,8 @@ function loadStats(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY)) ||
 function saveStats(s){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }catch(e){} }
 
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+// Ссылка «вариант N и/или M» внутри текста ответа (сборные варианты): 1 и 2, 1 и/или 2, 2 или 3, «1, 2, 3».
+const REF_NUM = /(^|[^0-9.,])[1-6]\s*(и\/или|и|или|,)\s*[1-6](?![0-9.])/i;
 function catsOf(){const c={};BANK.forEach(q=>c[q.cat]=(c[q.cat]||0)+1);return c}
 
 // ---- init menus ----
@@ -1356,7 +1358,10 @@ function renderQ(){
   const q=session.list[session.idx];
   session.answered=false; picked=null;
   let order=q.options.map((_,i)=>i);
-  if(session.shuffleA) order=shuffle(order);
+  // «Сборные» варианты («Варианты 1 и 2», «Верны ответы 1 и 3» …) ссылаются на НОМЕРА
+  // других вариантов — такие вопросы не перемешиваем, иначе номера перестанут совпадать.
+  const refsByNumber = q.options.some(o=>REF_NUM.test(o));
+  if(session.shuffleA && !refsByNumber) order=shuffle(order);
 
   $("#q-tag").textContent=q.cat;
   $("#q-prog").textContent=`${session.idx+1} / ${session.list.length}`;
@@ -1365,10 +1370,9 @@ function renderQ(){
   const qi=$("#q-img"); if(q.img){qi.src=q.img;qi.classList.remove("hide");}else{qi.classList.add("hide");qi.removeAttribute("src");}
 
   const ans=$("#answers"); ans.innerHTML="";
-  const letters=["А","Б","В","Г","Д","Е"];
   order.forEach((orig,pos)=>{
     const el=document.createElement("div"); el.className="ans"; el.dataset.orig=orig;
-    el.innerHTML=`<span class="mark">${letters[pos]}</span><span>${q.options[orig]}</span>`;
+    el.innerHTML=`<span class="mark">${pos+1}</span><span>${q.options[orig]}</span>`;
     el.onclick=()=>choose(el,orig); ans.appendChild(el);
   });
 
